@@ -20,10 +20,10 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-# 氨基酸到索引的映射（1-20）
+# Mapping of Amino Acids to Indices (1-20)
 amino_to_index = {amino: i+1 for i, amino in enumerate('ARNDCQEGHILKMFPSTWYV')}
 
-# 创建自定义数据集类
+# Custom dataset class
 class ProteinDataset(Dataset):
     def __init__(self, data, amino_to_index, max_length=100):
         self.data = data
@@ -37,7 +37,7 @@ class ProteinDataset(Dataset):
         sequence = self.data.iloc[idx, 0]
         label = self.data.iloc[idx, 1]
 
-        # 将氨基酸序列转换为索引序列，并填充到指定的最大长度
+        # Convert amino acid sequence to index sequence
         sequence_indices = [self.amino_to_index.get(amino, 0) for amino in sequence]
         sequence_indices += [0] * (self.max_length - len(sequence_indices))
         sequence_indices = sequence_indices[:self.max_length]
@@ -47,7 +47,7 @@ class ProteinDataset(Dataset):
             'label': torch.tensor(label)
         }
 
-# 从本地CSV文件中读取数据
+# Read data from a local CSV file
 data = pd.read_csv('Data_1vs1.csv')
 
 device = torch.device('cuda')
@@ -78,17 +78,17 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-# 定义模型
+# Define model
 class ProteinPredictor(nn.Module):
     def __init__(self, num_labels, max_length=100):
         super(ProteinPredictor, self).__init__()
-        self.embedding = nn.Embedding(len(amino_to_index) + 1, 128)  # 加1用于填充
+        self.embedding = nn.Embedding(len(amino_to_index) + 1, 128)
         self.transformer = nn.Transformer(d_model=128, nhead=8, num_encoder_layers=4)
         self.fc = nn.Linear(max_length * 128, num_labels)
 
     def forward(self, sequence_indices):
         embedded = self.embedding(sequence_indices)
-        transformer_output = self.transformer(embedded.permute(1, 0, 2), embedded.permute(1, 0, 2))  # 使用源序列作为目标序列
+        transformer_output = self.transformer(embedded.permute(1, 0, 2), embedded.permute(1, 0, 2))
         pooled_output = transformer_output.permute(1, 0, 2).reshape(sequence_indices.size(0), -1)
         logits = self.fc(pooled_output)
         return logits
@@ -98,12 +98,12 @@ num_labels = 2
 model = ProteinPredictor(num_labels, max_length=100)
 model.to(device)  # Move the model to GPU if available
 
-# 定义损失函数和优化器，添加weight_decay参数
+# Define optimizer and loss function
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
-# 定义学习率调度器
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2, factor=0.5, verbose=True) #ReduceLROnPlateau： 在验证集上的性能不再提升时降低学习率。
+#  Define learning rate scheduler parameters
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2, factor=0.5, verbose=True)
 
 
 # Training and testing loops
@@ -150,7 +150,7 @@ for epoch in range(num_epochs):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             
-            probabilities = torch.nn.functional.softmax(outputs, dim=1)[:, 1]  # 获取预测为 positive 的概率
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)[:, 1] 
 
             all_labels.extend(labels.cpu().numpy())
             all_scores.extend(probabilities.cpu().numpy())
@@ -162,20 +162,20 @@ for epoch in range(num_epochs):
         conf_matrix = confusion_matrix(true_labels, predicted_labels)
 
 
-        # Precision指标衡量了模型在所有被预测为正例的样本中，有多少样本真正属于正例。
+
         #precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0
 
-        tp = conf_matrix[1, 1]# 真阳性
-        tn = conf_matrix[0, 0] # 真阴性
-        fp = conf_matrix[0, 1] # 假阳性
-        fn = conf_matrix[1, 0] # 假阴性
+        tp = conf_matrix[1, 1]
+        tn = conf_matrix[0, 0]
+        fp = conf_matrix[0, 1]
+        fn = conf_matrix[1, 0]
 
-        sn = tp / (tp + fn) if (tp + fn) != 0 else 0.0 # 真阳性率（Sensitivity，也称为召回率或查全率）
-        sp = tn / (tn + fp) if (tn + fp) != 0 else 0.0 # 特异性（Specificity）：表示被模型正确识别为负例的能力
+        sn = tp / (tp + fn) if (tp + fn) != 0 else 0.0
+        sp = tn / (tn + fp) if (tn + fp) != 0 else 0.0
 
         accuracy = (tp + tn) / (tp + tn + fp + fn)
 
-        precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0 #Precision（精确率）是用于评估分类模型性能的指标之一。它衡量了在模型预测为正例的样本中，有多少是真正的正例
+        precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0
         f1_score = 2 * (precision * sn) / (precision + sn) if (precision + sn) != 0 else 0.0
 
         print('Epoch [{}/{}]\tAvg Loss: {:.4f}, True Positives: {:.4f}, True Negatives: {:.4f}, False Positives: {:.4f}, False Negatives: {:.4f},'
