@@ -19,10 +19,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 
-# 氨基酸到索引的映射（1-20）
+# Mapping of Amino Acids to Indices (1-20)
 amino_to_index = {amino: i+1 for i, amino in enumerate('ARNDCQEGHILKMFPSTWYV')}
 
-# 创建自定义数据集类
+# Custom dataset class
 class ProteinDataset(Dataset):
     def __init__(self, data, amino_to_index, max_length=100):
         self.data = data
@@ -36,7 +36,7 @@ class ProteinDataset(Dataset):
         sequence = self.data.iloc[idx, 0]
         label = self.data.iloc[idx, 1]
 
-        # 将氨基酸序列转换为索引序列，并填充到指定的最大长度
+        # Convert amino acid sequence to index sequence
         sequence_indices = [self.amino_to_index.get(amino, 0) for amino in sequence]
         sequence_indices += [0] * (self.max_length - len(sequence_indices))
         sequence_indices = sequence_indices[:self.max_length]
@@ -46,7 +46,7 @@ class ProteinDataset(Dataset):
             'label': torch.tensor(label)
         }
 
-# 从本地CSV文件中读取数据
+# Read data from a local CSV file
 data = pd.read_csv('Data_1vs1.csv')
 
 device = torch.device('cuda')
@@ -75,24 +75,24 @@ batch_size = 64
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-# 定义学习率调度器参数
-initial_lr = 0.00001  # 初始学习率，您可以根据需要调整
+# Define learning rate scheduler parameters
+initial_lr = 0.00001 
 lr_decay_factor = 0.5
 lr_patience = 2
 current_lr = initial_lr
 no_improvement_count = 0
-# 初始化RoBERTa模型和tokenizer
-# 指定本地模型路径
+
+
 local_model_path = "./roberta"
-# 加载tokenizer
+
 tokenizer = RobertaTokenizer.from_pretrained(local_model_path)
-# 加载模型
+
 model = RobertaForSequenceClassification.from_pretrained(local_model_path, num_labels=2)
 
-# 定义优化器和损失函数
+# Define optimizer and loss function
 optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5)
 
-class_weight = torch.tensor([0.008, 1.0])  # 根据类别不平衡情况调整权重
+class_weight = torch.tensor([0.008, 1.0])
 criterion = torch.nn.CrossEntropyLoss(weight=class_weight.to(device))
 
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -100,7 +100,7 @@ model.to(device)
 # Define learning rate scheduler
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=lr_decay_factor, patience=lr_patience, verbose=True)
 
-# 训练和测试循环
+
 num_epochs = 30
 best_auc = 0.0
 
@@ -122,7 +122,7 @@ for epoch in range(num_epochs):
 
     avg_loss = total_loss / len(train_dataloader)
 
-    # 验证循环
+
     model.eval()
     true_labels = []
     predicted_labels = []
@@ -175,7 +175,7 @@ for epoch in range(num_epochs):
 
         if auc > best_auc:
             best_auc = auc
-            # 保存模型检查点
+
             torch.save(model.state_dict(), 'best_Roberta_gpu.pth')
         else:
             no_improvement_count += 1
