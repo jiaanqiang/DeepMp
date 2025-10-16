@@ -16,10 +16,11 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from transformers import AlbertForSequenceClassification, AlbertTokenizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# 氨基酸到索引的映射（1-20）
+# Mapping of Amino Acids to Indices (1-20)
 amino_to_index = {amino: i+1 for i, amino in enumerate('ARNDCQEGHILKMFPSTWYV')}
 
-# 创建自定义数据集类
+# Create a custom dataset class
+
 class ProteinDataset(Dataset):
     def __init__(self, data, amino_to_index, max_length=100):
         self.data = data
@@ -33,7 +34,7 @@ class ProteinDataset(Dataset):
         sequence = self.data.iloc[idx, 0]
         label = self.data.iloc[idx, 1]
 
-        # 将氨基酸序列转换为索引序列，并填充到指定的最大长度
+        # Translate amino acid sequences into index sequences and pad them to the specified maximum length
         sequence_indices = [self.amino_to_index.get(amino, 0) for amino in sequence]
         sequence_indices += [0] * (self.max_length - len(sequence_indices))
         sequence_indices = sequence_indices[:self.max_length]
@@ -43,7 +44,7 @@ class ProteinDataset(Dataset):
             'label': torch.tensor(label)
         }
 
-# 从本地CSV文件中读取数据
+# Read data from a local CSV file
 data = pd.read_csv('Data_1vs1.csv')
 
 device = torch.device('cuda')
@@ -77,7 +78,7 @@ class ProteinPredictor(torch.nn.Module):
     def __init__(self, local_model_path, num_labels):
         super(ProteinPredictor, self).__init__()
         
-        # 从本地路径加载 ALBERT 模型和 tokenizer
+        # Load the ALBERT model and tokenizer from a local path
         self.albert_model = AlbertForSequenceClassification.from_pretrained(local_model_path, num_labels=num_labels)
         self.tokenizer = AlbertTokenizer.from_pretrained(local_model_path, padding=True)
 
@@ -85,22 +86,22 @@ class ProteinPredictor(torch.nn.Module):
         input_ids = x
         outputs = self.albert_model(input_ids=input_ids)
         return outputs.logits
-model_name = "./albert"  # 本地模型路径
+model_name = "./albert"
 num_labels = 2
 model = ProteinPredictor(model_name, num_labels)
 model.to(device)
 
-# 定义学习率调度器参数
-initial_lr = 0.00001  # 初始学习率，您可以根据需要调整
+# Define learning rate scheduler parameters
+initial_lr = 0.00001
 lr_decay_factor = 0.5
 lr_patience = 2
 current_lr = initial_lr
 no_improvement_count = 0
 
-# 定义优化器和损失函数
+# Define optimizer and loss function
 optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5)
 
-class_weight = torch.tensor([0.008, 1.0])  # 根据类别不平衡情况调整权重
+class_weight = torch.tensor([0.008, 1.0])  # Adjust weights based on class imbalance
 criterion = torch.nn.CrossEntropyLoss(weight=class_weight.to(device))
 
 # Define learning rate scheduler
@@ -150,7 +151,7 @@ for epoch in range(num_epochs):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             
-            probabilities = torch.nn.functional.softmax(outputs, dim=1)[:, 1]  # 获取预测为 positive 的概率
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)[:, 1]  # Get the probability of being predicted as positive
 
             all_labels.extend(labels.cpu().numpy())
             all_scores.extend(probabilities.cpu().numpy())
@@ -162,20 +163,20 @@ for epoch in range(num_epochs):
         conf_matrix = confusion_matrix(true_labels, predicted_labels)
 
 
-        # Precision指标衡量了模型在所有被预测为正例的样本中，有多少样本真正属于正例。
+
         #precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0
 
-        tp = conf_matrix[1, 1]# 真阳性
-        tn = conf_matrix[0, 0] # 真阴性
-        fp = conf_matrix[0, 1] # 假阳性
-        fn = conf_matrix[1, 0] # 假阴性
+        tp = conf_matrix[1, 1] # True Positive
+        tn = conf_matrix[0, 0] # True Negative
+        fp = conf_matrix[0, 1] # False Positive
+        fn = conf_matrix[1, 0] # False Negative
 
-        sn = tp / (tp + fn) if (tp + fn) != 0 else 0.0 # 真阳性率（Sensitivity，也称为召回率或查全率）
-        sp = tn / (tn + fp) if (tn + fp) != 0 else 0.0 # 特异性（Specificity）：表示被模型正确识别为负例的能力
+        sn = tp / (tp + fn) if (tp + fn) != 0 else 0.0 
+        sp = tn / (tn + fp) if (tn + fp) != 0 else 0.0 
 
         accuracy = (tp + tn) / (tp + tn + fp + fn)
 
-        precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0 #Precision（精确率）是用于评估分类模型性能的指标之一。它衡量了在模型预测为正例的样本中，有多少是真正的正例
+        precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0 
         f1_score = 2 * (precision * sn) / (precision + sn) if (precision + sn) != 0 else 0.0
 
         print('Epoch [{}/{}]\tAvg Loss: {:.4f}, True Positives: {:.4f}, True Negatives: {:.4f}, False Positives: {:.4f}, False Negatives: {:.4f},'
@@ -189,7 +190,6 @@ for epoch in range(num_epochs):
 
         if auc > best_auc:
             best_auc = auc
-            # 保存模型检查点
             torch.save(model.state_dict(), 'best_albert_gpu.pth')
         else:
             no_improvement_count += 1
