@@ -43,8 +43,7 @@ class ProteinDataset(Dataset):
             'label': torch.tensor(label)
         }
 
-
-# 从本地CSV文件中读取数据
+# Read data from a local CSV file
 data = pd.read_csv('Data_1vs1.csv')
 
 device = torch.device('cuda')
@@ -90,8 +89,8 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-5)
 
 
-# 定义学习率调度器
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, verbose=True) #ReduceLROnPlateau： 在验证集上的性能不再提升时降低学习率.
+# Define learning rate scheduler
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5, verbose=True) 
 
 # Training and testing loops
 num_epochs = 30
@@ -168,3 +167,4 @@ for epoch in range(num_epochs):
         #     torch.save(model.state_dict(), 'best_bert_gpu.pth')
     # Update the learning rate scheduler
     scheduler.step(accuracy)
+
