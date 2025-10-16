@@ -7,20 +7,20 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import pandas as pd
+from sklearn.metrics import confusion_matrix
 import torch.nn.functional as F
+from sklearn.metrics import matthews_corrcoef
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.metrics import roc_auc_score, roc_curve
-import torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sklearn.metrics import matthews_corrcoef, confusion_matrix
+
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-# 氨基酸到索引的映射（1-20）
+# Mapping of Amino Acids to Indices (1-20)
 amino_to_index = {amino: i+1 for i, amino in enumerate('ARNDCQEGHILKMFPSTWYV')}
 
-# 创建自定义数据集类
+# Custom dataset class
 class ProteinDataset(Dataset):
     def __init__(self, data, amino_to_index, max_length=100):
         self.data = data
@@ -34,7 +34,7 @@ class ProteinDataset(Dataset):
         sequence = self.data.iloc[idx, 0]
         label = self.data.iloc[idx, 1]
 
-        # 将氨基酸序列转换为索引序列，并填充到指定的最大长度
+        # Convert amino acid sequence to index sequence
         sequence_indices = [self.amino_to_index.get(amino, 0) for amino in sequence]
         sequence_indices += [0] * (self.max_length - len(sequence_indices))
         sequence_indices = sequence_indices[:self.max_length]
@@ -44,8 +44,38 @@ class ProteinDataset(Dataset):
             'label': torch.tensor(label)
         }
 
+# Read data from a local CSV file
+data = pd.read_csv('Data_1vs1.csv')
 
-# 定义模型
+# Separating features (sequences) and labels
+X = data.iloc[:, 0]  # The first column is the sequence
+y = data.iloc[:, 1]  # The second column is the label
+
+# Split the data ensuring consistent class ratios in train and test sets
+train_X_1, test_X_1, train_y_1, test_y_1 = train_test_split(X[y == 1], y[y == 1], test_size=0.2, random_state=100)
+train_X_0, test_X_0, train_y_0, test_y_0 = train_test_split(X[y == 0], y[y == 0], test_size=0.2, random_state=100)
+
+train_X = pd.concat([train_X_1, train_X_0])
+test_X = pd.concat([test_X_1, test_X_0])
+train_y = pd.concat([train_y_1, train_y_0])
+test_y = pd.concat([test_y_1, test_y_0])
+
+# Combine features and labels for train and test sets and shuffle the data within each class to add randomness
+train_data = shuffle(pd.DataFrame({'sequence': train_X, 'label': train_y}), random_state=100)
+test_data = shuffle(pd.DataFrame({'sequence': test_X, 'label': test_y}), random_state=100)
+
+# Create dataset objects for train and test sets
+train_dataset = ProteinDataset(train_data, amino_to_index=amino_to_index, max_length=100)
+test_dataset = ProteinDataset(test_data, amino_to_index=amino_to_index, max_length=100)
+
+# Create data loaders
+batch_size = 64
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+
+
+# Define model
 class ProteinPredictor(nn.Module):
     def __init__(self, input_size, num_classes, max_length=100):
         super(ProteinPredictor, self).__init__()
@@ -55,7 +85,7 @@ class ProteinPredictor(nn.Module):
         
         # Define the layers
         self.embedding = nn.Embedding(input_size, embedding_dim)
-        self.conv1 = nn.Conv1d(embedding_dim, 256, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv1d(embedding_dim, 256, kernel_size=5, padding=2)
         self.conv2 = nn.Conv1d(256, 512, kernel_size=3, padding=1)
         self.conv3 = nn.Conv1d(512, 1024, kernel_size=3, padding=1)
         self.conv4 = nn.Conv1d(1024, 2048, kernel_size=3, padding=1)
@@ -63,7 +93,7 @@ class ProteinPredictor(nn.Module):
         self.dropout = nn.Dropout(0.2)
         # Adjust the input size for GRU to match the output size of convolutions
         self.bigru = nn.GRU(2048, hidden_size, num_layers=6, batch_first=True, bidirectional=True, dropout=0.2)
-        self.self_attention = nn.MultiheadAttention(embed_dim=hidden_size * 2, num_heads=16, dropout=0.2)
+        self.self_attention = nn.MultiheadAttention(embed_dim=hidden_size * 2, num_heads=8, dropout=0.2)
         self.fc = nn.Linear(hidden_size * 2, num_classes)
         self.relu = nn.ReLU()
         
@@ -85,10 +115,10 @@ class ProteinPredictor(nn.Module):
         x = self.conv2(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        x = self.conv3(x)  # 新增的卷积层
+        x = self.conv3(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        x = self.conv4(x)  # 新增的卷积层
+        x = self.conv4(x)
         x = self.relu(x)
         x = self.maxpool(x)
         
@@ -105,60 +135,102 @@ class ProteinPredictor(nn.Module):
         
         return output
 
-# Load the pre-trained model
-model = ProteinPredictor(input_size=len(amino_to_index) + 1, num_classes=2)
-model.to(torch.device('cuda'))
-model.load_state_dict(torch.load('best_CNN_gpu.pth'))
-model.eval()
+# Initialize model
+input_size = len(amino_to_index) + 1
+num_classes = 2
 
-# 加载 FASTA 文件
-def read_fasta(file_path):
-    sequences = {}
-    with open(file_path, 'r') as file:
-        current_id = None
-        for line in file:
-            line = line.strip()
-            if line.startswith('>'):
-                current_id = line[1:]  # 获取 ID
-                sequences[current_id] = ''
-            else:
-                sequences[current_id] += line
-    return sequences
+device = torch.device('cuda')
+
+model = ProteinPredictor(input_size, num_classes)
+model.to(device)  # Move the model to GPU if available
+
+# Define optimizer and loss function
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
+
+#  Define learning rate scheduler parameters
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2, factor=0.5, verbose=True) #ReduceLROnPlateau
+
+# Training and testing loops
+num_epochs = 30
+best_accuracy = 0.0
+all_labels = []
+all_scores = []
+
+for epoch in range(num_epochs):
+    model.train()
+    total_loss = 0.0
+    for batch in train_dataloader:
+        sequence_indices = batch['sequence_indices'].to(device)  # Move data to GPU
+        labels = batch['label'].to(device)  # Move data to GPU
+
+        optimizer.zero_grad()
+        outputs = model(sequence_indices)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+
+    avg_loss = total_loss / len(train_dataloader)
+
+    # Validation Loop
+    model.eval()
+    true_labels = []  # Initialize true_labels and predicted_labels lists
+    predicted_labels = []
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for batch in test_dataloader:
+            sequence_indices = batch['sequence_indices'].to(device)  # Move data to GPU
+            labels = batch['label'].to(device)  # Move data to GPU
+
+            outputs = model(sequence_indices)
+            _, predicted = torch.max(outputs.data, 1)
+            
+            true_labels.extend(labels.cpu().numpy())
+            predicted_labels.extend(predicted.cpu().numpy())
+            
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)[:, 1]
+
+            all_labels.extend(labels.cpu().numpy())
+            all_scores.extend(probabilities.cpu().numpy())
+
+        auc = roc_auc_score(all_labels, all_scores)
+
+        mcc = matthews_corrcoef(true_labels, predicted_labels)
+
+        conf_matrix = confusion_matrix(true_labels, predicted_labels)
 
 
-# Update the preprocess_sequence function to handle batches
-def preprocess_sequences(fasta_sequences, max_length=100):
-    processed_sequences = torch.zeros((len(fasta_sequences), max_length), dtype=torch.long)
-    for i, (sequence_id, sequence) in enumerate(fasta_sequences.items()):
-        sequence_indices = [amino_to_index.get(amino, 0) for amino in sequence]
-        sequence_indices += [0] * (max_length - len(sequence_indices))
-        sequence_indices = sequence_indices[:max_length]
-        processed_sequences[i, :] = torch.tensor(sequence_indices)
-    return processed_sequences
-# Read sequences from a FASTA file
-fasta_file = "Zea_mays_rename.orf"
-sequences = read_fasta(fasta_file)
+        #precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0
 
-# Output file path
-output_file = "Zea_mays_rename_prediction.txt"
+        tp = conf_matrix[1, 1]
+        tn = conf_matrix[0, 0]
+        fp = conf_matrix[0, 1]
+        fn = conf_matrix[1, 0]
 
-# Batch processing of sequences
-batch_size = 32
-sequence_items = list(sequences.items())
-sequence_batches = [sequence_items[i:i + batch_size] for i in range(0, len(sequence_items), batch_size)]
+        sn = tp / (tp + fn) if (tp + fn) != 0 else 0.0
+        sp = tn / (tn + fp) if (tn + fp) != 0 else 0.0
 
-# Predict sequences in batches and write to file
-with open(output_file, 'w') as file:
-    for batch in sequence_batches:
-        batch_sequences = {sequence_id: sequence for sequence_id, sequence in batch}
-        processed_sequences = preprocess_sequences(batch_sequences, max_length=100)
-        with torch.no_grad():
-            model_input = processed_sequences.to(torch.device('cuda'))
-            output = model(model_input)
-            _, predicted_classes = torch.max(output, 1)
+        accuracy = (tp + tn) / (tp + tn + fp + fn)
 
-        for (sequence_id, _), predicted_class in zip(batch, predicted_classes.tolist()):
-            if predicted_class == 1:
-                file.write(f"{sequence_id}\n")
+        precision = tp / (tp + fp) if (tp + fp) != 0 else 0.0
+        f1_score = 2 * (precision * sn) / (precision + sn) if (precision + sn) != 0 else 0.0
 
-print(f"Predictions written to {output_file}")
+        print('Epoch [{}/{}]\tAvg Loss: {:.4f}, True Positives: {:.4f}, True Negatives: {:.4f}, False Positives: {:.4f}, False Negatives: {:.4f},'
+            .format(epoch+1, num_epochs, avg_loss, tp, tn, fp, fn))
+
+        print('Epoch [{}/{}]\tTrain Loss: {:.4f}\tTest Accuracy: {:.2f}%, AUC: {:.4f}, Sn: {:.4f}, Sp: {:.4f}, Mcc: {:.4f}, Precision: {:.4f}, f1_score: {:.4f}'
+            .format(epoch+1, num_epochs, avg_loss, accuracy * 100, auc, sn, sp, mcc, precision,f1_score))
+
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            # Save the model checkpoint
+            torch.save(model.state_dict(), 'best_model_CNN.pth')
+    #Update the learning rate scheduler
+    scheduler.step(accuracy)
