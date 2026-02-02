@@ -78,4 +78,4 @@ python Script/4CNN_BiGRU_Attention_predict.py -input ./Data/Test.fasta -output .
 ```
 ## Citation
 
-Jia, Anqiang, et al. Deep learning reveals a microprotein atlas in maize and uncovers novel regulators of seed amino acid metabolism. bioRxiv (2025): 2025-11.
+Jia, Anqiang, et al. Deep learning reveals a microprotein atlas in maize and uncovers novel regulators of seed amino acid metabolism. bioRxiv (2025): 2025-11. https://doi.org/10.1101/2025.11.14.688563.
