@@ -62,7 +62,7 @@ pip install joblib==1.3.2        # For scikit-learn model persistence
 - Positive Dataset: A total of 13,767 validated plant peptide sequences. The sources are: 6,828 and 6,816 entries from Arabidopsis and rice, respectively. An additional 123 peptides expanded from public databases.
 - Negative Dataset: Constructed based on the following criteria: Selected Open Reading Frames (ORFs) lacking support from omics data. Ensured these negative sequences share no homology with the positive dataset mentioned above to prevent bias.
 ```bash
-python 4CNN_BiLGRU_Attention_train.py -input ../Data/Data.csv
+python 4CNN_BiLGRU_Attention_train.py -input ./Data/Data.csv
 ```
 ### Predict Microproteins
 - Model Applicability Note:
@@ -71,7 +71,7 @@ This model is primarily designed for predicting microproteins in plant species t
 - Important:
 For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence.
 ```bash
-python Script/4CNN_BiLSTM_Attention_predict.py -input ../Data/Test.fasta -output ../results/Test_predict_result.txt
+python Script/4CNN_BiLSTM_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
 ```
 ## Citation
 
