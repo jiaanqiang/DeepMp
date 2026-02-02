@@ -24,8 +24,8 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 - GPU acceleration support
 
 <div align="center">
-  <img src="Fig/DeepMp.jpg" alt="DeepMp Model Architecture and Workflow" width="80%">
-  <p><em>Computational pipeline and performance of DeepMp for microprotein identification. (A) Overview of the multi-omics and deep learning-based pipeline to identify high-confidence microproteins in maize. Software are enclosed in dashed boxes, and the sample cohort sizes for omics data are emphasized in bold. (B) Architecture of the DeepMp model, a hybrid network integrating convolutional neural networks (CNN), bidirectional gated recurrent units (Bi-GRU), and multi-head self-attention mechanisms. Input sequences were encoded (amino acids 1–20) and zero-padded to a length of 100 residues. (C) Benchmarking of DeepMp against four pre-trained language models. All models were fine-tuned on an identical balanced dataset (13,453 positive and 18,938 negative sequences) under consistent hyperparameters (Lr, learning rate: 1e-5; Weight decay: 1e-5) to ensure a fair comparison. (D) Performance comparison on the held-out test set. DeepMp demonstrates superior performance. Metrics include: Acc, Accuracy; Sn, Sensitivity; Sp, Specificity; MCC, Matthews correlation coefficient.</em></p>
+  <img src="Fig/Fig1.jpg" alt="DeepMp Framework" width="90%">
+  <p><em>DeepMp framework for microprotein identification. (A) Model architecture combining CNN, Bi-GRU, and attention mechanisms. (B-C) Performance comparison showing DeepMp outperforms established language models (ALBERT V2, BERT, RoBERTa, Transformer) with superior accuracy.</em></p>
 </div>
 
 ## Installation
