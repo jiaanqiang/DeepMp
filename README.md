@@ -50,7 +50,8 @@ pip install biopython==1.81      # Compatible with numpy 1.24.3
 pip install tqdm==4.66.1
 pip install joblib==1.3.2        # For scikit-learn model persistence
 
-### Usage
+```
+## Installation
 ```bash
 
 python Script/4CNN_BiLGRU_Attention_train.py
