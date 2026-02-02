@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![DOI](https://img.shields.io/badge/DOI-10.xxxx%2Fxxxxx-blue)
+![DOI](https://img.shields.io/badge/DOI-10.1101/2025.11.14.688563)
 ![GitHub Actions](https://img.shields.io/github/actions/workflow/status/deepbio/DeepMp/tests.yml)
 
 **A deep learning framework for systematic identification and prediction of microproteins**
