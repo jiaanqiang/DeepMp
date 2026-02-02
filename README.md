@@ -30,31 +30,34 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 
 ## Installation
 
-### Installation Dependencies
+### Method 1: Using environment.yml File
+
 ```bash
-# Version-tested compatible combination for DeepMp
-# PyTorch ecosystem
-pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0
+# 1. Create environment from yml file
+conda env create -f environment.yml
 
-# Numerical computing and data processing
-pip install numpy==1.24.3        # Compatible with PyTorch 2.1.0
-pip install pandas==2.1.3        # Latest stable with good compatibility
-pip install scipy==1.11.3        # Compatible with numpy 1.24.3
+# 2. Activate the environment
+conda activate DeepMp
 
-# Machine learning utilities
-pip install scikit-learn==1.3.1  # Compatible with numpy 1.24.3
+# 3. Verify installation
+python -c "import torch; print(f'PyTorch {torch.__version__} installed successfully')"
 
-# Visualization
-pip install matplotlib==3.8.0    # Compatible with numpy 1.24.3
-pip install seaborn==0.13.0      # Requires matplotlib >= 3.6
+```
 
-# Bioinformatics
-pip install biopython==1.81      # Compatible with numpy 1.24.3
+### Method 2: Using environment.yml File
+```bash
 
-# Utilities
-pip install tqdm==4.66.1
-pip install joblib==1.3.2        # For scikit-learn model persistence
+# 1. Create new environment with Python 3.9
+conda create -n DeepMp python=3.9 -y
 
+# 2. Activate the environment
+conda activate DeepMp
+
+# 3. Install all dependencies (single command)
+conda install pytorch=2.1.0 torchvision=0.16.0 torchaudio=2.1.0 numpy=1.24.3 pandas=2.1.3 scipy=1.11.3 scikit-learn=1.3.1 matplotlib=3.8.0 seaborn=0.13.0 biopython=1.81 tqdm=4.66.1 joblib=1.3.2 -c pytorch -c conda-forge -y
+
+# 4. Verify installation
+python -c "import torch, numpy; print(f'PyTorch: {torch.__version__}, NumPy: {numpy.__version__}')"
 ```
 ## Usage
 
