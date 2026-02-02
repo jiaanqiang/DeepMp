@@ -44,7 +44,7 @@ python -c "import torch; print(f'PyTorch {torch.__version__} installed successfu
 
 ```
 
-### Method 2: Using environment.yml File
+### Method 2: Direct Conda Installation
 ```bash
 
 # 1. Create new environment with Python 3.9
