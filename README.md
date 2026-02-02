@@ -19,7 +19,7 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 **Key Features:**
 - Hybrid 4-layer CNN + 6-layer Bi-GRU + 16-head Attention architecture
 - Trained on 13,497 experimentally validated microproteins
-- High prediction accuracy (MCC: 0.88, Accuracy: 0.94)
+- High prediction accuracy
 - Easy-to-use command line and Python API
 - GPU acceleration support
 
