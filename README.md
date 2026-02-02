@@ -52,8 +52,15 @@ pip install joblib==1.3.2        # For scikit-learn model persistence
 
 ```
 ## Installation
+
+### Train Model
 ```bash
-
 python Script/4CNN_BiLGRU_Attention_train.py
+```
+### Predict Microproteins
+```bash
+python Script/4CNN_BiLSTM_Attention_predict.py
+```
+## Citation
 
-
+Jia, Anqiang, Yawen Yang, Min Jin, Jimin Zhan, Mi Zhang, Sixuan Xu, Zhen Li et al. "Deep learning reveals a microprotein atlas in maize and uncovers novel regulators of seed amino acid metabolism." bioRxiv (2025): 2025-11.
