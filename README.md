@@ -1,59 +1,60 @@
 # 🧬 DeepMp: A deep learning framework for genome-wide microprotein identification
 
 <div align="center">
-  
+
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Model](https://img.shields.io/badge/Model-CNN--BiLSTM--Attention-blue)
+![Architecture](https://img.shields.io/badge/Architecture-4CNN--BiGRU--Attention-blue)
+
+**A Hybrid Deep Learning Model for Microprotein Identification (5-100 aa)**
 
 </div>
 
-## 📋 Table of Contents
-- [Overview](#overview)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [High-confidence Dataset](#high-confidence-dataset)
-- [Model Training](#model-training)
-- [Prediction](#prediction)
-- [Model Architecture](#model-architecture)
-- [Requirements](#requirements)
-- [Citation](#citation)
-- [Contact](#contact)
+## 🏗️ Model Architecture
 
-## Overview
-DeepMp is a hybrid deep learning framework that combines Convolutional Neural Networks (CNN), Bidirectional Long Short-Term Memory (BiLSTM), and Attention mechanisms for accurate microprotein (5-100 amino acids) prediction from genomic sequences. The model was trained on a **high-confidence reference set of 13,497 non-redundant microproteins** rigorously validated by extensive experimental evidence.
+DeepMp is a hybrid neural network combining three key components:
 
-### Key Features
-- **Hybrid Architecture**: 4 CNN layers + BiLSTM + Attention mechanism
-- **High-confidence Training**: 13,497 experimentally validated microproteins
-- **Multi-species Data**: 6,828 Arabidopsis + 6,816 rice + 123 public database entries
-- **Rigorous Validation**: 62 Ribo-seq datasets + 89 proteomic datasets
-- **Easy-to-use**: Simple command line interface and Python API
+### 1. 4-Layer 1D-CNN Block
+- **4 convolutional layers** with 3×1 kernels
+- **ReLU activation** and **MaxPooling** (kernel size=2)
+- **Purpose**: Extract local sequence motifs
 
-## Installation
+### 2. 6-Layer Bi-GRU
+- **Bidirectional Gated Recurrent Units** (6 layers)
+- **Dropout rate**: 0.2
+- **Purpose**: Model long-range sequence dependencies
 
-### Prerequisites
-- Python 3.8 or higher
-- PyTorch 2.0 or higher
-- CUDA 11.x (optional, for GPU acceleration)
+### 3. 16-Head Self-Attention
+- **16 attention heads** with dropout=0.2
+- **Purpose**: Weight functionally critical residues
+- **Output**: Focus on important amino acids
 
-### Installation Steps
+### Final Classification
+- **Fully connected layer** with sigmoid activation
+- **Binary output**: Microprotein (1) or Non-microprotein (0)
+
+### Input Processing
+- **Sequence length**: Standardized to 100 residues
+- **Padding**: Zero-padding for shorter sequences
+- **Amino acid encoding**: 20 standard amino acids (1-20)
+
+### Optimized Hyperparameters
+- **Learning rate**: 1e-5
+- **Weight decay**: 1e-5
+- **Batch size**: 32
+- **Optimizer**: AdamW with cosine scheduler
+
+## 📦 Quick Installation
+
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/deepbio/DeepMp.git
 cd DeepMp
 
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Install PyTorch (if not already installed)
-# For CPU only:
+# Install dependencies
 pip install torch torchvision torchaudio
+pip install numpy pandas biopython scikit-learn
 
-# For GPU (CUDA 11.8):
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
-# 4. Verify installation
-python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
-python -c "from deepmp import __version__; print(f'DeepMp version: {__version__}')"
+# Or install all at once
+pip install -r requirements.txt
