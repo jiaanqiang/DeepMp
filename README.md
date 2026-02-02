@@ -1,4 +1,4 @@
-# 🧬 DeepMp: Microprotein Prediction Framework
+# 🧬 DeepMp: A deep learning framework for genome-wide microprotein identification
 
 <div align="center">
   
