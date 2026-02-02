@@ -59,6 +59,13 @@ pip install joblib==1.3.2        # For scikit-learn model persistence
 ## Usage
 
 ### Train Model
+-Positive Dataset: A total of 13,767 validated plant peptide sequences. The sources are:
+-6,828 and 6,816 entries from Arabidopsis and rice, respectively.
+-An additional 123 peptides expanded from public databases.
+-Negative Dataset: Constructed based on the following criteria:
+
+-Selected Open Reading Frames (ORFs) lacking support from omics data.
+-Ensured these negative sequences share no homology with the positive dataset mentioned above to prevent bias.
 ```bash
 python 4CNN_BiLGRU_Attention_train.py -input Data/Data.csv
 ```
