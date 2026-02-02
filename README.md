@@ -60,7 +60,7 @@ pip install joblib==1.3.2        # For scikit-learn model persistence
 
 ### Train Model
 ```bash
-python Script/4CNN_BiLGRU_Attention_train.py
+python 4CNN_BiLGRU_Attention_train.py -input Data/Data.csv
 ```
 ### Predict Microproteins
 ```bash
