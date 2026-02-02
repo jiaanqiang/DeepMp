@@ -76,6 +76,8 @@ For species that are more distantly related (e.g., animals, fungi, or distant pl
 ```bash
 python Script/4CNN_BiGRU_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
 ```
+- Output Results: The protein ID list is stored in the file Test_predict_result.txt located in the ./results/ directory.
+
 ## Citation
 
 Jia, Anqiang, et al. Deep learning reveals a microprotein atlas in maize and uncovers novel regulators of seed amino acid metabolism. bioRxiv (2025): 2025-11. https://doi.org/10.1101/2025.11.14.688563.
