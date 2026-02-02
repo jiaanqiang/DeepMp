@@ -24,7 +24,7 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 - GPU acceleration support
 
 <div align="center">
-  <img src="Fig/Fig1.jpg" alt="DeepMp Model Architecture and Workflow" width="80%">
+  <img src="Fig/DeepMp.jpg" alt="DeepMp Model Architecture and Workflow" width="80%">
   <p><em>Figure 1: DeepMp model architecture and microprotein identification workflow</em></p>
 </div>
 
