@@ -64,7 +64,7 @@ python 4CNN_BiLGRU_Attention_train.py -input Data/Data.csv
 ```
 ### Predict Microproteins
 ```bash
-python Script/4CNN_BiLSTM_Attention_predict.py
+python Script/4CNN_BiLSTM_Attention_predict.py -input Test.fasta -output Test_predict_result.txt
 ```
 ## Citation
 
