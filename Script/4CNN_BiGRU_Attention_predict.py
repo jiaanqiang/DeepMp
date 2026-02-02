@@ -1,13 +1,51 @@
 import os
+import random
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
 import pandas as pd
+import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
+from sklearn.metrics import roc_auc_score, roc_curve
+import torch
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from sklearn.metrics import matthews_corrcoef, confusion_matrix
 import argparse
+
+# Set CUDA device
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Amino acid to index mapping (1-20)
 amino_to_index = {amino: i+1 for i, amino in enumerate('ARNDCQEGHILKMFPSTWYV')}
 
-# Define model
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Protein Sequence Prediction using CNN-BiGRU-Attention Model')
+    
+    parser.add_argument('-input', '--input_file', type=str, required=True,
+                       help='Path to input FASTA file containing protein sequences')
+    parser.add_argument('-output', '--output_file', type=str, required=True,
+                       help='Path to output file for prediction results')
+    parser.add_argument('-model', '--model_path', type=str, default='best_CNN_gpu.pth',
+                       help='Path to trained model checkpoint (default: best_CNN_gpu.pth)')
+    parser.add_argument('-batch', '--batch_size', type=int, default=32,
+                       help='Batch size for prediction (default: 32)')
+    parser.add_argument('-maxlen', '--max_length', type=int, default=100,
+                       help='Maximum sequence length (default: 100)')
+    parser.add_argument('-device', '--device_id', type=str, default='0',
+                       help='CUDA device ID (default: 0)')
+    parser.add_argument('-threshold', '--pred_threshold', type=float, default=0.5,
+                       help='Prediction threshold for positive class (default: 0.5)')
+    parser.add_argument('-save_prob', '--save_probabilities', action='store_true',
+                       help='Save prediction probabilities along with class labels')
+    
+    return parser.parse_args()
+
+# Protein predictor model definition
 class ProteinPredictor(nn.Module):
     def __init__(self, input_size, num_classes, max_length=100):
         super(ProteinPredictor, self).__init__()
@@ -32,11 +70,13 @@ class ProteinPredictor(nn.Module):
         self._initialize_weights()  # Weight initialization
 
     def _initialize_weights(self):
+        """Initialize model weights using Kaiming normal initialization"""
         for m in self.modules():
             if isinstance(m, (nn.Conv1d, nn.Linear, nn.Embedding)):
                 nn.init.kaiming_normal_(m.weight)
 
     def forward(self, x):
+        """Forward pass through the model"""
         embedded = self.embedding(x)
         embedded = embedded.permute(0, 2, 1)  # Reshape for convolutional layer
         
@@ -47,10 +87,10 @@ class ProteinPredictor(nn.Module):
         x = self.conv2(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        x = self.conv3(x)
+        x = self.conv3(x)  # Additional convolutional layer
         x = self.relu(x)
         x = self.maxpool(x)
-        x = self.conv4(x)
+        x = self.conv4(x)  # Additional convolutional layer
         x = self.relu(x)
         x = self.maxpool(x)
         
@@ -67,202 +107,224 @@ class ProteinPredictor(nn.Module):
         
         return output
 
-# Load FASTA file
 def read_fasta(file_path):
-    """Read sequences from a FASTA file"""
+    """
+    Read sequences from a FASTA file
+    
+    Args:
+        file_path: Path to the FASTA file
+    
+    Returns:
+        Dictionary with sequence IDs as keys and sequences as values
+    """
     sequences = {}
     with open(file_path, 'r') as file:
         current_id = None
-        current_seq = []
         for line in file:
             line = line.strip()
             if line.startswith('>'):
-                if current_id is not None:
-                    sequences[current_id] = ''.join(current_seq)
-                current_id = line[1:].split()[0]  # Take only the ID part before space
-                current_seq = []
+                current_id = line[1:]  # Get ID (remove '>')
+                sequences[current_id] = ''
             else:
-                current_seq.append(line)
-        # Don't forget the last sequence
-        if current_id is not None:
-            sequences[current_id] = ''.join(current_seq)
+                sequences[current_id] += line.upper()  # Convert to uppercase
     return sequences
 
-# Update the preprocess_sequence function to handle batches
 def preprocess_sequences(fasta_sequences, max_length=100):
-    """Preprocess sequences for model input"""
+    """
+    Preprocess sequences for model input
+    
+    Args:
+        fasta_sequences: Dictionary of sequences
+        max_length: Maximum sequence length for padding/truncation
+    
+    Returns:
+        Tensor of processed sequences
+    """
     processed_sequences = torch.zeros((len(fasta_sequences), max_length), dtype=torch.long)
     for i, (sequence_id, sequence) in enumerate(fasta_sequences.items()):
+        # Convert amino acids to indices
         sequence_indices = [amino_to_index.get(amino, 0) for amino in sequence]
-        sequence_indices += [0] * (max_length - len(sequence_indices))
-        sequence_indices = sequence_indices[:max_length]
+        
+        # Pad or truncate to max_length
+        if len(sequence_indices) < max_length:
+            sequence_indices += [0] * (max_length - len(sequence_indices))
+        else:
+            sequence_indices = sequence_indices[:max_length]
+        
         processed_sequences[i, :] = torch.tensor(sequence_indices)
+    
     return processed_sequences
 
-def parse_args():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Predict protein sequences using pre-trained model')
-    parser.add_argument('-input', '--input', type=str, required=True,
-                       help='Path to input FASTA file (e.g., Test.fasta)')
-    parser.add_argument('-output', '--output', type=str, default='prediction_results.txt',
-                       help='Path to output prediction file (default: prediction_results.txt)')
-    parser.add_argument('-model', '--model_path', type=str, default='best_CNN_gpu.pth',
-                       help='Path to pre-trained model (default: best_CNN_gpu.pth)')
-    parser.add_argument('-batch_size', '--batch_size', type=int, default=32,
-                       help='Batch size for prediction (default: 32)')
-    parser.add_argument('-max_length', '--max_length', type=int, default=100,
-                       help='Maximum sequence length (default: 100)')
-    parser.add_argument('-gpu', '--gpu_id', type=str, default='0',
-                       help='GPU ID to use (default: 0)')
-    parser.add_argument('-threshold', '--threshold', type=float, default=0.5,
-                       help='Probability threshold for positive prediction (default: 0.5)')
-    parser.add_argument('--save_all', action='store_true',
-                       help='Save all predictions with probabilities, not just positive ones')
+def validate_sequences(sequences):
+    """
+    Validate that sequences contain only valid amino acids
     
-    return parser.parse_args()
+    Args:
+        sequences: Dictionary of sequences
+    
+    Returns:
+        List of sequence IDs with invalid sequences
+    """
+    valid_amino_acids = set('ARNDCQEGHILKMFPSTWYV')
+    invalid_sequences = []
+    
+    for seq_id, sequence in sequences.items():
+        if not set(sequence).issubset(valid_amino_acids):
+            invalid_sequences.append(seq_id)
+    
+    return invalid_sequences
 
 def main():
+    """Main function for prediction"""
     # Parse command line arguments
-    args = parse_args()
+    args = parse_arguments()
     
-    # Set GPU
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
+    # Set CUDA device
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.device_id
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Print configuration
+    print("=" * 60)
+    print("Protein Sequence Prediction")
+    print("=" * 60)
+    print(f"Input FASTA file: {args.input_file}")
+    print(f"Output file: {args.output_file}")
+    print(f"Model checkpoint: {args.model_path}")
+    print(f"Batch size: {args.batch_size}")
+    print(f"Max sequence length: {args.max_length}")
+    print(f"Prediction threshold: {args.pred_threshold}")
+    print(f"Device: {device}")
+    print("=" * 60)
+    
+    # Check if input file exists
+    if not os.path.exists(args.input_file):
+        print(f"Error: Input file '{args.input_file}' not found!")
+        return
     
     # Check if model file exists
     if not os.path.exists(args.model_path):
         print(f"Error: Model file '{args.model_path}' not found!")
         return
     
-    # Check if input file exists
-    if not os.path.exists(args.input):
-        print(f"Error: Input FASTA file '{args.input}' not found!")
-        return
+    # Create output directory if it doesn't exist
+    output_dir = os.path.dirname(args.output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created output directory: {output_dir}")
     
-    # Output configuration
-    print("=" * 50)
-    print("Prediction Configuration:")
-    print(f"  Input FASTA file: {args.input}")
-    print(f"  Output file: {args.output}")
-    print(f"  Model file: {args.model_path}")
-    print(f"  Batch size: {args.batch_size}")
-    print(f"  Max sequence length: {args.max_length}")
-    print(f"  Probability threshold: {args.threshold}")
-    print(f"  Save all predictions: {args.save_all}")
-    print("=" * 50)
+    # Read sequences from FASTA file
+    print(f"Reading sequences from {args.input_file}...")
+    sequences = read_fasta(args.input_file)
+    print(f"Loaded {len(sequences)} sequences")
     
-    # Initialize model
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
+    # Validate sequences
+    invalid_seqs = validate_sequences(sequences)
+    if invalid_seqs:
+        print(f"Warning: {len(invalid_seqs)} sequences contain invalid amino acids")
+        if len(invalid_seqs) > 5:
+            print(f"First 5 invalid sequence IDs: {invalid_seqs[:5]}")
+        else:
+            print(f"Invalid sequence IDs: {invalid_seqs}")
     
+    # Load the pre-trained model
+    print("Loading model...")
     model = ProteinPredictor(input_size=len(amino_to_index) + 1, num_classes=2)
-    model.to(device)
     
-    # Load pre-trained model
     try:
-        model.load_state_dict(torch.load(args.model_path, map_location=device))
-        print(f"Successfully loaded model from {args.model_path}")
+        checkpoint = torch.load(args.model_path, map_location=device)
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint)
     except Exception as e:
         print(f"Error loading model: {e}")
         return
     
+    model.to(device)
     model.eval()
+    print("Model loaded successfully")
     
-    # Read sequences from FASTA file
-    try:
-        sequences = read_fasta(args.input)
-        print(f"Successfully loaded {len(sequences)} sequences from {args.input}")
-        
-        if len(sequences) == 0:
-            print("Error: No sequences found in the input file!")
-            return
-            
-        # Show some sample sequences
-        print("\nSample sequences (first 3):")
-        for i, (seq_id, seq) in enumerate(list(sequences.items())[:3]):
-            print(f"  {seq_id}: {seq[:50]}... (length: {len(seq)})")
-    except Exception as e:
-        print(f"Error reading FASTA file: {e}")
-        return
-    
-    # Batch processing
+    # Batch processing of sequences
     batch_size = args.batch_size
     sequence_items = list(sequences.items())
-    sequence_batches = [sequence_items[i:i + batch_size] for i in range(0, len(sequence_items), batch_size)]
+    sequence_batches = [sequence_items[i:i + batch_size] 
+                       for i in range(0, len(sequence_items), batch_size)]
     
-    print(f"\nProcessing {len(sequences)} sequences in {len(sequence_batches)} batches...")
+    print(f"Processing {len(sequence_batches)} batch(es) of up to {batch_size} sequences each...")
     
-    # Predict sequences in batches
-    all_predictions = []
-    
-    with torch.no_grad():
-        for batch_idx, batch in enumerate(sequence_batches):
+    # Open output file
+    with open(args.output_file, 'w') as file:
+        # Write header
+        if args.save_probabilities:
+            file.write("# Sequence_ID\n")
+        else:
+            file.write("# Sequence_ID\n")
+        
+        total_positive = 0
+        total_negative = 0
+        
+        for batch_idx, batch in enumerate(sequence_batches, 1):
             batch_sequences = {sequence_id: sequence for sequence_id, sequence in batch}
-            processed_sequences = preprocess_sequences(batch_sequences, max_length=args.max_length)
             
-            model_input = processed_sequences.to(device)
-            output = model(model_input)
-            
-            # Get probabilities
-            probabilities = torch.softmax(output, dim=1)
-            positive_probs = probabilities[:, 1].cpu().numpy()
-            
-            # Get predicted classes
-            _, predicted_classes = torch.max(output, 1)
-            predicted_classes = predicted_classes.cpu().numpy()
-            
-            # Store predictions
-            for (sequence_id, sequence), pred_class, pos_prob in zip(batch, predicted_classes, positive_probs):
-                all_predictions.append({
-                    'sequence_id': sequence_id,
-                    'length': len(sequence),
-                    'predicted_class': int(pred_class),
-                    'positive_probability': float(pos_prob),
-                    'is_positive': pos_prob >= args.threshold
-                })
-            
-            # Progress update
-            if (batch_idx + 1) % max(1, len(sequence_batches) // 10) == 0 or (batch_idx + 1) == len(sequence_batches):
-                print(f"  Processed batch {batch_idx + 1}/{len(sequence_batches)}")
+            try:
+                # Preprocess sequences
+                processed_sequences = preprocess_sequences(batch_sequences, max_length=args.max_length)
+                
+                # Make predictions
+                with torch.no_grad():
+                    model_input = processed_sequences.to(device)
+                    output = model(model_input)
+                    
+                    # Get probabilities and predicted classes
+                    probabilities = torch.nn.functional.softmax(output, dim=1)
+                    positive_probs = probabilities[:, 1].cpu().numpy()
+                    
+                    # Apply threshold
+                    predicted_classes = (positive_probs >= args.pred_threshold).astype(int)
+                
+                # Write results to file
+                for (sequence_id, _), pred_class, prob in zip(batch, predicted_classes, positive_probs):
+                    if args.save_probabilities:
+                        file.write(f"{sequence_id}\t{pred_class}\t{prob:.4f}\n")
+                    else:
+                        if pred_class == 1:
+                            file.write(f"{sequence_id}\n")
+                    
+                    if pred_class == 1:
+                        total_positive += 1
+                    else:
+                        total_negative += 1
+                
+                print(f"Processed batch {batch_idx}/{len(sequence_batches)} "
+                      f"({len(batch)} sequences)")
+                
+            except Exception as e:
+                print(f"Error processing batch {batch_idx}: {e}")
+                continue
     
-    # Write results to file
-    try:
-        with open(args.output, 'w') as file:
-            if args.save_all:
-                # Save all predictions with details
-                file.write("Sequence_ID\tLength\tPredicted_Class\tPositive_Probability\tIs_Positive\n")
-                for pred in all_predictions:
-                    file.write(f"{pred['sequence_id']}\t{pred['length']}\t{pred['predicted_class']}\t{pred['positive_probability']:.4f}\t{pred['is_positive']}\n")
-                print(f"\nSaved all predictions to {args.output}")
-            else:
-                # Save only positive predictions (original behavior)
-                positive_count = 0
-                for pred in all_predictions:
-                    if pred['is_positive']:
-                        file.write(f"{pred['sequence_id']}\n")
-                        positive_count += 1
-                print(f"\nSaved {positive_count} positive predictions to {args.output}")
-        
-        # Summary statistics
-        positive_count = sum(1 for pred in all_predictions if pred['is_positive'])
-        avg_positive_prob = sum(pred['positive_probability'] for pred in all_predictions if pred['is_positive']) / max(1, positive_count)
-        
-        print("\n" + "=" * 50)
-        print("Prediction Summary:")
-        print(f"  Total sequences: {len(all_predictions)}")
-        print(f"  Positive predictions: {positive_count} ({positive_count/len(all_predictions)*100:.1f}%)")
-        print(f"  Negative predictions: {len(all_predictions) - positive_count}")
-        print(f"  Average positive probability: {avg_positive_prob:.4f}")
-        
-        # Show some predictions
-        print("\nSample predictions (first 5):")
-        for pred in all_predictions[:5]:
-            status = "POSITIVE" if pred['is_positive'] else "negative"
-            print(f"  {pred['sequence_id']}: {status} (prob: {pred['positive_probability']:.4f})")
-        print("=" * 50)
-        
-    except Exception as e:
-        print(f"Error writing output file: {e}")
-        return
+    # Print summary
+    print("\n" + "=" * 60)
+    print("Prediction Summary:")
+    print("=" * 60)
+    print(f"Total sequences processed: {len(sequences)}")
+    print(f"Positive predictions (Class 1): {total_positive}")
+    print(f"Negative predictions (Class 0): {total_negative}")
+    print(f"Positive rate: {(total_positive/len(sequences)*100):.2f}%")
+    print(f"Results saved to: {args.output_file}")
+    print("=" * 60)
+    
+    # Save detailed statistics if requested
+    if args.save_probabilities:
+        stats_file = args.output_file.replace('.txt', '_stats.txt')
+        with open(stats_file, 'w') as f:
+            f.write("Prediction Statistics\n")
+            f.write("=" * 40 + "\n")
+            f.write(f"Total sequences: {len(sequences)}\n")
+            f.write(f"Positive predictions: {total_positive}\n")
+            f.write(f"Negative predictions: {total_negative}\n")
+            f.write(f"Positive rate: {(total_positive/len(sequences)*100):.2f}%\n")
+            f.write(f"Threshold used: {args.pred_threshold}\n")
+        print(f"Detailed statistics saved to: {stats_file}")
 
 if __name__ == "__main__":
     main()
