@@ -27,19 +27,25 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 
 ### Quick Install
 ```bash
-# 安装 PyTorch（根据您的CUDA版本选择）
-# CPU版本
-pip install torch==2.0.0 torchvision==0.15.0 torchaudio==2.0.0
+# Version-tested compatible combination for DeepMp
+# PyTorch ecosystem
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0
 
-# CUDA 11.8版本
-pip install torch==2.0.0 torchvision==0.15.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cu118
+# Numerical computing and data processing
+pip install numpy==1.24.3        # Compatible with PyTorch 2.1.0
+pip install pandas==2.1.3        # Latest stable with good compatibility
+pip install scipy==1.11.3        # Compatible with numpy 1.24.3
 
-# 安装其他必需包
-pip install numpy==1.24.3
-pip install pandas==2.0.3
-pip install scikit-learn==1.3.0
-pip install matplotlib==3.7.2
-pip install seaborn==0.12.2
-pip install biopython==1.81
-pip install tqdm==4.65.0
-pip install scipy==1.11.1
+# Machine learning utilities
+pip install scikit-learn==1.3.1  # Compatible with numpy 1.24.3
+
+# Visualization
+pip install matplotlib==3.8.0    # Compatible with numpy 1.24.3
+pip install seaborn==0.13.0      # Requires matplotlib >= 3.6
+
+# Bioinformatics
+pip install biopython==1.81      # Compatible with numpy 1.24.3
+
+# Utilities
+pip install tqdm==4.66.1
+pip install joblib==1.3.2        # For scikit-learn model persistence
