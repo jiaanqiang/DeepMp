@@ -56,7 +56,7 @@ pip install tqdm==4.66.1
 pip install joblib==1.3.2        # For scikit-learn model persistence
 
 ```
-## Installation
+## Usage
 
 ### Train Model
 ```bash
