@@ -65,6 +65,11 @@ pip install joblib==1.3.2        # For scikit-learn model persistence
 python 4CNN_BiLGRU_Attention_train.py -input Data/Data.csv
 ```
 ### Predict Microproteins
+- Model Applicability Note:
+This model is primarily designed for predicting microproteins in plant species that are closely related to Arabidopsis and rice.
+
+- Important:
+For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence.
 ```bash
 python Script/4CNN_BiLSTM_Attention_predict.py -input Test.fasta -output Test_predict_result.txt
 ```
