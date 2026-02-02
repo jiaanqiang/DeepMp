@@ -71,7 +71,7 @@ This model is primarily designed for predicting microproteins in plant species t
 - Important:
 For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence.
 ```bash
-python Script/4CNN_BiLSTM_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
+python Script/4CNN_BiGRU_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
 ```
 ## Citation
 
