@@ -25,7 +25,7 @@ DeepMp is a deep learning model that identifies microproteins (5-100 amino acids
 
 ## Installation
 
-### Quick Install
+### Installation Dependencies
 ```bash
 # Version-tested compatible combination for DeepMp
 # PyTorch ecosystem
