@@ -7,29 +7,53 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Model](https://img.shields.io/badge/Model-CNN--BiLSTM--Attention-blue)
 
-**Hybrid Deep Learning Model for Microprotein Identification**
-
 </div>
 
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Installation](#installation)
-- [File Structure](#file-structure)
-- [Training](#training)
+- [Quick Start](#quick-start)
+- [High-confidence Dataset](#high-confidence-dataset)
+- [Model Training](#model-training)
 - [Prediction](#prediction)
-- [Data Format](#data-format)
 - [Model Architecture](#model-architecture)
 - [Requirements](#requirements)
 - [Citation](#citation)
+- [Contact](#contact)
 
 ## Overview
-DeepMp is a hybrid deep learning model combining CNN, BiLSTM, and Attention mechanisms for microprotein prediction from genomic sequences. The model extracts local features using CNN layers, captures sequence dependencies with BiLSTM, and focuses on important residues through attention mechanisms.
+DeepMp is a hybrid deep learning framework that combines Convolutional Neural Networks (CNN), Bidirectional Long Short-Term Memory (BiLSTM), and Attention mechanisms for accurate microprotein (5-100 amino acids) prediction from genomic sequences. The model was trained on a **high-confidence reference set of 13,497 non-redundant microproteins** rigorously validated by extensive experimental evidence.
+
+### Key Features
+- **Hybrid Architecture**: 4 CNN layers + BiLSTM + Attention mechanism
+- **High-confidence Training**: 13,497 experimentally validated microproteins
+- **Multi-species Data**: 6,828 Arabidopsis + 6,816 rice + 123 public database entries
+- **Rigorous Validation**: 62 Ribo-seq datasets + 89 proteomic datasets
+- **Easy-to-use**: Simple command line interface and Python API
 
 ## Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- PyTorch 2.0 or higher
+- CUDA 11.x (optional, for GPU acceleration)
+
+### Installation Steps
 ```bash
-# Clone repository
+# 1. Clone the repository
 git clone https://github.com/deepbio/DeepMp.git
 cd DeepMp
 
-# Install dependencies
-pip install torch>=2.0.0 numpy>=1.21.0 pandas>=1.3.0 biopython>=1.79 scikit-learn>=1.0.0 matplotlib>=3.5.0 tqdm>=4.64.0
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Install PyTorch (if not already installed)
+# For CPU only:
+pip install torch torchvision torchaudio
+
+# For GPU (CUDA 11.8):
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# 4. Verify installation
+python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+python -c "from deepmp import __version__; print(f'DeepMp version: {__version__}')"
