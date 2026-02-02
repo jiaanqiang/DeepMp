@@ -8,7 +8,7 @@
 
 **A deep learning model for microprotein identification (5-100 amino acids)**
 
-[Quick Start](#-quick-start) | [Installation](#-installation) | [Usage](#usage) | [Citation](#citation)
+[Overview](#-overview) | [Installation](#-installation) | [Usage](#usage) | [Citation](#citation)
 
 </div>
 
