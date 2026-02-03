@@ -65,7 +65,7 @@ python -c "import torch, numpy; print(f'PyTorch: {torch.__version__}, NumPy: {nu
 - Positive Dataset: A total of 13,767 validated plant peptide sequences. The sources are: 6,828 and 6,816 entries from Arabidopsis and rice, respectively. An additional 123 peptides expanded from public databases.
 - Negative Dataset: Constructed based on the following criteria: Selected open reading frames (ORFs) lacking support from omics data. Ensured these negative sequences share no homology with the positive dataset mentioned above to prevent bias.
 ```bash
-python Script/4CNN_BiLGRU_Attention_train.py -input ./Data/Data.csv
+python Script/4CNN_BiGRU_Attention_train.py -input ./Data/Data.csv
 ```
 ### Predict Microproteins
 - Model Applicability Note:
