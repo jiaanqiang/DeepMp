@@ -63,7 +63,7 @@ python -c "import torch, numpy; print(f'PyTorch: {torch.__version__}, NumPy: {nu
 
 ### Train Model
 - Positive Dataset: A total of 13,767 validated plant peptide sequences. The sources are: 6,828 and 6,816 entries from Arabidopsis and rice, respectively. An additional 123 peptides expanded from public databases.
-- Negative Dataset: Constructed based on the following criteria: Selected Open Reading Frames (ORFs) lacking support from omics data. Ensured these negative sequences share no homology with the positive dataset mentioned above to prevent bias.
+- Negative Dataset: Constructed based on the following criteria: Selected open reading frames (ORFs) lacking support from omics data. Ensured these negative sequences share no homology with the positive dataset mentioned above to prevent bias.
 ```bash
 python Script/4CNN_BiLGRU_Attention_train.py -input ./Data/Data.csv
 ```
@@ -72,7 +72,7 @@ python Script/4CNN_BiLGRU_Attention_train.py -input ./Data/Data.csv
 This model is primarily designed for predicting microproteins in plant species that are closely related to Arabidopsis and rice.
 
 - Important:
-For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence. To expedite processing for large datasets, predictions can be run in parallel by splitting the input files, such as processing open reading frames (ORFs) from different chromosomes separately.
+For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence. To expedite processing for large datasets, predictions can be run in parallel by splitting the input files, such as processing ORFs from different chromosomes separately.
 ```bash
 python Script/4CNN_BiGRU_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
 ```
