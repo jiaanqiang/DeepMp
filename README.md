@@ -72,7 +72,7 @@ python Script/4CNN_BiLGRU_Attention_train.py -input ./Data/Data.csv
 This model is primarily designed for predicting microproteins in plant species that are closely related to Arabidopsis and rice.
 
 - Important:
-For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence.
+For species that are more distantly related (e.g., animals, fungi, or distant plant lineages), it is recommended to first collect species-specific verified microprotein data to re-train or fine-tune the model before making predictions. Direct application may lead to reduced accuracy due to sequence feature divergence. To expedite processing for large datasets, predictions can be run in parallel by splitting the input files, such as processing open reading frames (ORFs) from different chromosomes separately.
 ```bash
 python Script/4CNN_BiGRU_Attention_predict.py -input ./Data/Test.fasta -output ./results/Test_predict_result.txt
 ```
